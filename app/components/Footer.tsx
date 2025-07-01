@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <a
-            href="https://github.com/safespace-ai"
+            href="https://github.com/arshchatrath/SafeSpace"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center space-x-2 sm:space-x-3 text-blue-400 hover:text-blue-300 mb-4 sm:mb-6 text-lg sm:text-xl font-semibold transition-all duration-300 hover:scale-105"
