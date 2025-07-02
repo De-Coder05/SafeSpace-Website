@@ -36,7 +36,7 @@ const contributors = [
     linkedin: "devansh-kumar",
     gradient: "from-purple-600 to-violet-600",
     initials: "DK",
-    img: "devansh.png",
+    img: "Devansh.png",
     expertise: ["DSP", "Audio Processing", "Algorithm Design"]
   },
   {
