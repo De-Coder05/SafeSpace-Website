@@ -5,7 +5,7 @@ import { gsap } from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import HeroSection from "./components/HeroSection"
 import AboutSection from "./components/AboutSection"
-import ContributorsSection from "./components/ContributorsSection"
+import ContributorsSection from "./components/contributors"
 import Footer from "./components/Footer"
 
 gsap.registerPlugin(ScrollTrigger)

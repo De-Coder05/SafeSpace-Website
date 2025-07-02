@@ -53,15 +53,15 @@ export default function Navbar() {
             >
               Home
             </Link>
-            <Link
-              href="#contributors"
+            <a
+              href="/#contributors"
               className={`transition-colors duration-300 hover:scale-105 ${
                 scrolled ? "text-gray-700 hover:text-blue-600" : "text-white/90 hover:text-white" 
               } font-semibold`}
               style={!scrolled ? { textShadow: "0 2px 8px rgba(0,0,0,0.25)" } : {}}
             >
               Contributors
-            </Link>
+            </a>
             <a
               href="https://github.com/arshchatrath/SafeSpace"
               target="_blank"
@@ -101,14 +101,14 @@ export default function Navbar() {
               >
                 Home
               </Link>
-              <Link
-                href="#contributors"
+              <a
+                href="/#contributors"
                 className="block px-3 py-2 text-white font-semibold hover:text-blue-200 hover:bg-blue-800/60 rounded-lg transition-all duration-200"
                 style={{ textShadow: "0 2px 8px rgba(0,0,0,0.25)" }}
                 onClick={() => setIsOpen(false)}
               >
                 Contributors
-              </Link>
+              </a>
               <a
                 href="https://github.com/safespace-ai"
                 target="_blank"

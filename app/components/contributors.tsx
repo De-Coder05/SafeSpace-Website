@@ -16,17 +16,17 @@ const contributors = [
     linkedin: "arshchatrath",
     gradient: "from-blue-600 to-indigo-600",
     initials: "AC",
-    img: "arsh.jpg",
+    img: "Arsh.jpg",
     expertise: ["Machine Learning", "NLP", "Computer Vision"]
   },
   {
     name: "Kabir Oberoi",
     role: "Edge Computing Specialist",
     github: "kabiroberoi",
-    linkedin: "kabir-oberoi",
+    linkedin: "kabir-oberoi-2a8480299",
     gradient: "from-teal-600 to-cyan-600",
     initials: "KO",
-    img: null,
+    img: "Kabir.png",
     expertise: ["Edge Computing", "IoT", "Distributed Systems"]
   },
   {
@@ -36,16 +36,16 @@ const contributors = [
     linkedin: "devansh-kumar",
     gradient: "from-purple-600 to-violet-600",
     initials: "DK",
-    img: null,
+    img: "devansh.png",
     expertise: ["DSP", "Audio Processing", "Algorithm Design"]
   },
   {
     name: "Durvish",
     role: "Voice Analysis Researcher",
-    github: "durvishpatel",
-    linkedin: "durvish-patel",
+    github: "durvishkhurana",
+    linkedin: "durvishkhurana",
     gradient: "from-emerald-600 to-teal-600",
-    initials: "DP",
+    initials: "DK",
     img: null,
     expertise: ["Voice Analysis", "Audio ML", "Speech Recognition"]
   },
@@ -56,26 +56,26 @@ const contributors = [
     linkedin: "lakshita-sharma",
     gradient: "from-orange-600 to-red-600",
     initials: "LS",
-    img: null,
+    img: "lakshita.jpg",
     expertise: ["User Experience", "Interface Design", "Design Systems"]
   },
   {
     name: "Khushpreet",
     role: "Senior Full Stack Developer",
-    github: "khushpreetsingh",
-    linkedin: "khushpreet-singh",
+    github: "khushpreets",
+    linkedin: "khushpreet",
     gradient: "from-indigo-600 to-purple-600",
-    initials: "KS",
+    initials: "K",
     img: null,
     expertise: ["React", "Node.js", "System Architecture"]
   },
   {
     name: "Samya",
     role: "Clinical Psychology Consultant",
-    github: "samyagupta",
-    linkedin: "dr-samya-gupta",
+    github: "Samya-Agg",
+    linkedin: "samyaagg",
     gradient: "from-cyan-600 to-blue-600",
-    initials: "SG",
+    initials: "SA",
     img: null,
     expertise: ["Clinical Psychology", "Mental Health", "Research"]
   },
@@ -131,7 +131,7 @@ export default function ContributorsSection() {
   }, [])
 
   return (
-    <section className="py-16 md:py-24 lg:py-32 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+    <section id="contributors" className="py-16 md:py-24 lg:py-32 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl"></div>

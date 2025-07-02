@@ -167,10 +167,13 @@ export default function CheckPage() {
   return (
     <main
       ref={pageRef}
-      className="min-h-screen bg-gradient-to-br from-blue-50 via-teal-50 to-purple-50 py-4 sm:py-6 md:py-8 pt-20"
+      id="check-page-main"
+      className="min-h-screen bg-gradient-to-br from-blue-50 via-teal-50 to-purple-50 py-4 sm:py-6 md:py-8 pt-[120px] scroll-mt-[120px]"
+      style={{ scrollMarginTop: '120px' }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 sm:mb-10 md:mb-12">
+          <div className="pt-8 sm:pt-12 md:pt-16"></div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6">
             Comprehensive Stress Analysis
           </h1>
