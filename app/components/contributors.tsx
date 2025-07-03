@@ -46,7 +46,7 @@ const contributors = [
     linkedin: "durvishkhurana",
     gradient: "from-emerald-600 to-teal-600",
     initials: "DK",
-    img: null,
+    img: "durvish.png",
     expertise: ["Voice Analysis", "Audio ML", "Speech Recognition"]
   },
   {
@@ -62,21 +62,21 @@ const contributors = [
   {
     name: "Khushpreet",
     role: "Senior Full Stack Developer",
-    github: "khushpreets",
+    github: "khushpreet",
     linkedin: "khushpreet",
     gradient: "from-indigo-600 to-purple-600",
     initials: "K",
-    img: null,
+    img: "khushpreet.jpg",
     expertise: ["React", "Node.js", "System Architecture"]
   },
   {
-    name: "Samya",
+    name: "Samya Aggarwal",
     role: "Clinical Psychology Consultant",
     github: "Samya-Agg",
-    linkedin: "samyaagg",
+    linkedin: "samya-aggarwal",
     gradient: "from-cyan-600 to-blue-600",
     initials: "SA",
-    img: null,
+    img: "samya.png",
     expertise: ["Clinical Psychology", "Mental Health", "Research"]
   },
 ];
