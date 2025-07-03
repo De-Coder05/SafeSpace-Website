@@ -311,7 +311,7 @@ return (
         </div>
 
         {/* Enhanced Edge Computing Section */}
-        <div className="mb-24">
+        {/* <div className="mb-24">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <AnimatedCard data-animate="edge-content" className="space-y-8">
               <div>
@@ -370,7 +370,7 @@ return (
               </div>
             </AnimatedCard>
           </div>
-        </div>
+        </div> */}
 
         {/* Enhanced Research Impact Section */}
         <AnimatedCard data-animate="research-impact">
