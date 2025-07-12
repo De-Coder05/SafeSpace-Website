@@ -21,7 +21,7 @@ const contributors = [
   },
   {
     name: "Kabir Oberoi",
-    role: "Edge Computing Specialist",
+    role: "ML expert",
     github: "kabiroberoi",
     linkedin: "kabir-oberoi-2a8480299",
     gradient: "from-teal-600 to-cyan-600",
