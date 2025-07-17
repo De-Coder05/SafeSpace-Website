@@ -2,452 +2,432 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
-import { gsap } from "gsap"
-import { Mic, MicOff, Wifi, WifiOff, Activity, AlertCircle, CheckCircle } from "lucide-react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Mic, Upload, Activity, FileText, Brain, Zap, BarChart3 } from "lucide-react"
 
-const DASS21_QUESTIONS = [
-  "I found it hard to wind down",                  // q1(S)
-  "I tended to over-react to situations",          // q6(s)
-  "I felt that I was using a lot of nervous energy", // q8(s)
-  "I found myself getting agitated",               // q11(s)
-  "I found it difficult to relax",                 // q12(s)
-  "I was intolerant of anything that kept me from getting on with what I was doing", // q14(s)
-  "I felt that I was rather touchy"                // q18(s)
+// Sample XAI images arrays (you can replace these with actual image URLs)
+const xaiImages = {
+  voice: [
+    "/placeholder.svg?height=300&width=400&text=Voice+XAI+Graph+1",
+    "/placeholder.svg?height=300&width=400&text=Voice+XAI+Graph+2",
+    "/placeholder.svg?height=300&width=400&text=Voice+XAI+Graph+3",
+  ],
+  physiological: [
+    "/placeholder.svg?height=300&width=400&text=Physiological+XAI+Graph+1",
+    "/placeholder.svg?height=300&width=400&text=Physiological+XAI+Graph+2",
+    "/placeholder.svg?height=300&width=400&text=Physiological+XAI+Graph+3",
+  ],
+  lateFusion: [
+    "/placeholder.svg?height=300&width=400&text=Late+Fusion+XAI+Graph+1",
+    "/placeholder.svg?height=300&width=400&text=Late+Fusion+XAI+Graph+2",
+    "/placeholder.svg?height=300&width=400&text=Late+Fusion+XAI+Graph+3",
+  ],
+  questionnaire: [
+    "/placeholder.svg?height=300&width=400&text=Questionnaire+XAI+Graph+1",
+    "/placeholder.svg?height=300&width=400&text=Questionnaire+XAI+Graph+2",
+    "/placeholder.svg?height=300&width=400&text=Questionnaire+XAI+Graph+3",
+  ],
+}
+
+const stressQuestions = [
+  "I found it hard to wind down",
+  "I was aware of dryness of my mouth",
+  "I couldn't seem to experience any positive feeling at all",
+  "I experienced breathing difficulty (eg, excessively rapid breathing, breathlessness in the absence of physical exertion)",
+  "I found it difficult to work up the initiative to do things",
+  "I tended to over-react to situations",
+  "I experienced trembling (eg, in the hands)",
 ]
 
 export default function CheckPage() {
-  const [deviceConnected, setDeviceConnected] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [dass21Responses, setDass21Responses] = useState<number[]>(new Array(21).fill(0))
-  const [stressResult, setStressResult] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [audioFile, setAudioFile] = useState<File | null>(null)
-  const [allDataReady, setAllDataReady] = useState(false)
-
-  const pageRef = useRef<HTMLDivElement>(null)
-  const resultsRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ".check-section",
-        { y: 40, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.8, stagger: 0.15, ease: "power3.out" },
-      )
-    })
-
-    return () => ctx.revert()
-  }, [])
-
-  useEffect(() => {
-    if (stressResult && resultsRef.current) {
-      gsap.fromTo(
-        resultsRef.current,
-        { scale: 0.9, opacity: 0, y: 30 },
-        { scale: 1, opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.7)" },
-      )
-    }
-  }, [stressResult])
-
-  // Check if all three modalities have data
-  useEffect(() => {
-    const hasPhysiological = uploadedFile !== null
-    const hasAudio = audioFile !== null || isRecording
-    const hasQuestionnaire = dass21Responses.some((response) => response > 0)
-
-    setAllDataReady(hasPhysiological && hasAudio && hasQuestionnaire)
-  }, [uploadedFile, audioFile, isRecording, dass21Responses])
-
-  const handleDass21Change = (index: number, value: number) => {
-    const newResponses = [...dass21Responses]
-    newResponses[index] = value
-    setDass21Responses(newResponses)
-  }
+  const [physiologicalData, setPhysiologicalData] = useState("")
+  const [questionnaire, setQuestionnaire] = useState<Record<string, string>>({})
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [results, setResults] = useState<any>(null)
+  const [selectedXaiImages, setSelectedXaiImages] = useState<Record<string, string>>({})
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      setUploadedFile(file)
-    }
-  }
-
-  const handleAudioUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
+    if (file && file.type.startsWith("audio/")) {
       setAudioFile(file)
     }
   }
 
-  const simulateDeviceConnection = () => {
-    setDeviceConnected(!deviceConnected)
+  const handleQuestionnaireChange = (questionIndex: number, value: string) => {
+    setQuestionnaire((prev) => ({
+      ...prev,
+      [questionIndex]: value,
+    }))
   }
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording)
-    if (!isRecording) {
-      // Simulate recording for 3 seconds
-      setTimeout(() => {
-        setIsRecording(false)
-        setAudioFile(new File([""], "recorded_audio.wav", { type: "audio/wav" }))
-      }, 3000)
+  const getRandomXaiImages = () => {
+    return {
+      voice: xaiImages.voice[Math.floor(Math.random() * xaiImages.voice.length)],
+      physiological: xaiImages.physiological[Math.floor(Math.random() * xaiImages.physiological.length)],
+      lateFusion: xaiImages.lateFusion[Math.floor(Math.random() * xaiImages.lateFusion.length)],
+      questionnaire: xaiImages.questionnaire[Math.floor(Math.random() * xaiImages.questionnaire.length)],
     }
   }
 
-  const analyzeAllModalities = async () => {
-    if (!allDataReady) return
+  const generateHardcodedResults = () => {
+    const isHighStress = Math.random() > 0.5
+    const stressLevel = isHighStress ? "High Stress" : "Low Stress"
+    const score = isHighStress
+      ? Math.floor(Math.random() * 31) + 70 // 70-100%
+      : Math.floor(Math.random() * 41) + 10 // 10-50%
 
-    setIsLoading(true)
-    try {
-      // Create comprehensive analysis payload
-      const analysisData = {
-        physiological: uploadedFile ? { filename: uploadedFile.name, size: uploadedFile.size } : null,
-        audio: audioFile ? { filename: audioFile.name, duration: "30s" } : null,
-        questionnaire: dass21Responses,
-        timestamp: new Date().toISOString(),
-      }
+    return {
+      overallStress: stressLevel,
+      stressScore: score,
+      recommendations: isHighStress
+        ? [
+            "Consider taking regular breaks throughout your day",
+            "Practice deep breathing exercises or meditation",
+            "Engage in physical activity to reduce stress hormones",
+            "Ensure you're getting adequate sleep (7-9 hours)",
+            "Consider speaking with a mental health professional",
+          ]
+        : [
+            "Maintain your current stress management practices",
+            "Continue with regular exercise and healthy habits",
+            "Keep up good sleep hygiene",
+            "Stay connected with supportive friends and family",
+            "Consider mindfulness practices to maintain balance",
+          ],
+    }
+  }
 
-      const response = await fetch("/api/predict/comprehensive", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(analysisData),
+  const handleAnalyze = async () => {
+    if (!audioFile || !physiologicalData.trim() || Object.keys(questionnaire).length < stressQuestions.length) {
+      alert("Please complete all three sections before analyzing.")
+      return
+    }
+
+    setIsAnalyzing(true)
+    setProgress(0)
+    setResults(null)
+
+    // Select random XAI images
+    const randomImages = getRandomXaiImages()
+    setSelectedXaiImages(randomImages)
+
+    // Simulate 60-second analysis with progress bar
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval)
+          setIsAnalyzing(false)
+          setResults(generateHardcodedResults())
+          return 100
+        }
+        return prev + 100 / 60 // Increment by ~1.67% per second for 60 seconds
       })
-
-      const result = await response.json()
-      setStressResult(result)
-    } catch (error) {
-      console.error("Error analyzing comprehensive data:", error)
-    } finally {
-      setIsLoading(false)
-    }
+    }, 1000)
   }
 
-  const getStressColor = (level: string) => {
-    switch (level?.toLowerCase()) {
-      case "low":
-        return "text-green-600 bg-green-50 border-green-200"
-      case "moderate":
-        return "text-orange-600 bg-orange-50 border-orange-200"
-      case "high":
-        return "text-red-600 bg-red-50 border-red-200"
-      default:
-        return "text-gray-600 bg-gray-50 border-gray-200"
-    }
-  }
-
-  const getCompletionPercentage = () => {
-    let completed = 0
-    if (uploadedFile) completed += 33
-    if (audioFile || isRecording) completed += 33
-    if (dass21Responses.some((response) => response > 0)) completed += 34
-    return completed
-  }
+  const isFormComplete =
+    audioFile && physiologicalData.trim() && Object.keys(questionnaire).length === stressQuestions.length
 
   return (
-    <main
-      ref={pageRef}
-      id="check-page-main"
-      className="min-h-screen bg-gradient-to-br from-blue-50 via-teal-50 to-purple-50 py-4 sm:py-6 md:py-8 pt-[120px] scroll-mt-[120px]"
-      style={{ scrollMarginTop: '120px' }}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8 sm:mb-10 md:mb-12">
-          <div className="pt-8 sm:pt-12 md:pt-16"></div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6">
-            Comprehensive Stress Analysis
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-6 sm:mb-8">
-            Complete all three assessments for accurate multimodal stress detection
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Stress Analysis</h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Complete all three sections below for a comprehensive stress analysis using our advanced AI technology.
           </p>
-
-          {/* Progress Indicator */}
-          <div className="max-w-md mx-auto mb-6 sm:mb-8">
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
-              <span>Assessment Progress</span>
-              <span>{getCompletionPercentage()}%</span>
-            </div>
-            <Progress value={getCompletionPercentage()} className="h-2 sm:h-3" />
-          </div>
-
-          {!allDataReady && (
-            <Alert className="max-w-2xl mx-auto mb-6 sm:mb-8">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-sm sm:text-base">
-                Please complete all three modalities (Physiological Data, Voice Recording, and Questionnaire) for
-                comprehensive analysis.
-              </AlertDescription>
-            </Alert>
-          )}
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6 sm:gap-8">
-          {/* Left Column - Input Methods */}
-          <div className="space-y-6 sm:space-y-8">
-            {/* Hardware Integration Section */}
-            <Card className="check-section border-0 shadow-lg sm:shadow-xl bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-4 sm:pb-6">
-                <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-lg sm:text-xl md:text-2xl">
-                  <Activity className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-blue-600" />
-                  <span>Physiological Data</span>
-                  {uploadedFile && <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6">
-                <div className="flex items-center justify-between p-4 sm:p-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl sm:rounded-2xl border">
-                  <div className="flex items-center space-x-3 sm:space-x-4">
-                    {deviceConnected ? (
-                      <Wifi className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-green-600" />
-                    ) : (
-                      <WifiOff className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-gray-400" />
-                    )}
-                    <span
-                      className={`text-sm sm:text-base font-semibold ${deviceConnected ? "text-green-600" : "text-gray-600"}`}
-                    >
-                      {deviceConnected ? "Device Connected ✅" : "No Device Connected"}
-                    </span>
-                  </div>
-                  <Button
-                    onClick={simulateDeviceConnection}
-                    variant={deviceConnected ? "destructive" : "default"}
-                    size="sm"
-                    className="rounded-lg sm:rounded-xl text-xs sm:text-sm"
-                  >
-                    {deviceConnected ? "Disconnect" : "Connect"}
-                  </Button>
-                </div>
-
-                <div>
-                  <Label
-                    htmlFor="file-upload"
-                    className="block text-sm sm:text-base md:text-lg font-semibold mb-2 sm:mb-4"
-                  >
-                    Upload Physiological Data (CSV/JSON)
-                  </Label>
-                  <div className="flex items-center space-x-2 sm:space-x-4">
-                    <Input
-                      id="file-upload"
-                      type="file"
-                      accept=".csv,.json"
-                      onChange={handleFileUpload}
-                      className="flex-1 p-3 sm:p-4 text-sm sm:text-base md:text-lg rounded-lg sm:rounded-xl"
-                    />
-                  </div>
-                  {uploadedFile && (
-                    <p className="text-green-600 mt-2 font-medium text-sm sm:text-base flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4" />
-                      <span>{uploadedFile.name} uploaded</span>
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Voice Recording Section */}
-            <Card className="check-section border-0 shadow-lg sm:shadow-xl bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-4 sm:pb-6">
-                <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-lg sm:text-xl md:text-2xl">
-                  <Mic className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-teal-600" />
+        {!isAnalyzing && !results && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Audio Input Section */}
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Mic className="w-5 h-5 text-blue-600" />
                   <span>Voice Analysis</span>
-                  {(audioFile || isRecording) && <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6">
-                <div className="text-center space-y-4 sm:space-y-6">
-                  <Button
-                    onClick={toggleRecording}
-                    className={`w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full text-white font-bold text-base sm:text-lg md:text-xl ${
-                      isRecording
-                        ? "bg-red-500 hover:bg-red-600 animate-pulse shadow-2xl shadow-red-500/50"
-                        : "bg-teal-600 hover:bg-teal-700 shadow-2xl shadow-teal-500/50"
-                    } transition-all duration-300 hover:scale-105`}
-                  >
-                    {isRecording ? (
-                      <div className="flex flex-col items-center">
-                        <MicOff className="w-8 h-8 sm:w-10 sm:h-10 md:w-16 md:h-16 mb-1 sm:mb-2" />
-                        <span className="text-xs sm:text-sm">Recording...</span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <Mic className="w-8 h-8 sm:w-10 sm:h-10 md:w-16 md:h-16 mb-1 sm:mb-2" />
-                        <span className="text-xs sm:text-sm">Start</span>
-                      </div>
-                    )}
-                  </Button>
-                  <p className="text-gray-600 font-medium text-sm sm:text-base">
-                    {isRecording ? "Recording your voice... Click to stop" : "Click to start voice recording"}
-                  </p>
-                </div>
-
-                <div className="border-t pt-4 sm:pt-6">
-                  <Label
-                    htmlFor="audio-upload"
-                    className="block text-sm sm:text-base md:text-lg font-semibold mb-2 sm:mb-4"
-                  >
-                    Or Upload Audio File
-                  </Label>
-                  <Input
-                    id="audio-upload"
-                    type="file"
-                    accept=".wav,.mp3,.m4a"
-                    onChange={handleAudioUpload}
-                    className="p-3 sm:p-4 text-sm sm:text-base md:text-lg rounded-lg sm:rounded-xl"
-                  />
-                  {audioFile && audioFile.name !== "recorded_audio.wav" && (
-                    <p className="text-green-600 mt-2 font-medium text-sm sm:text-base flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4" />
-                      <span>{audioFile.name} uploaded</span>
-                    </p>
-                  )}
-                  {audioFile && audioFile.name === "recorded_audio.wav" && (
-                    <p className="text-green-600 mt-2 font-medium text-sm sm:text-base flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Voice recorded successfully</span>
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* DASS-21 Questionnaire */}
-            <Card className="check-section border-0 shadow-lg sm:shadow-xl bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-4 sm:pb-6">
-                <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-lg sm:text-xl md:text-2xl">
-                  <span>DASS-21 Questionnaire</span>
-                  {dass21Responses.some((response) => response > 0) && (
-                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-                  )}
-                </CardTitle>
-                <p className="text-gray-600 font-medium text-sm sm:text-base">
-                  Rate each statement: 0 = Never, 1 = Sometimes, 2 = Often, 3 = Almost Always
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6 max-h-80 sm:max-h-96 overflow-y-auto">
-                {DASS21_QUESTIONS.map((question, index) => (
-                  <div key={index} className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
-                    <Label className="font-medium text-gray-800 text-sm sm:text-base">
-                      {index + 1}. {question}
-                    </Label>
-                    <div className="flex space-x-2 sm:space-x-3">
-                      {[0, 1, 2, 3].map((value) => (
-                        <Button
-                          key={value}
-                          variant={dass21Responses[index] === value ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handleDass21Change(index, value)}
-                          className="w-10 h-8 sm:w-12 sm:h-10 md:w-16 md:h-12 text-sm sm:text-base md:text-lg font-semibold rounded-lg sm:rounded-xl"
-                        >
-                          {value}
-                        </Button>
-                      ))}
-                    </div>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="audio-upload">Upload Audio File</Label>
+                  <div className="mt-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="audio/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="audio-upload"
+                    />
+                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
+                      <Upload className="w-4 h-4 mr-2" />
+                      {audioFile ? audioFile.name : "Choose Audio File"}
+                    </Button>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Analysis & Results */}
-          <div className="space-y-6 sm:space-y-8">
-            {/* Analysis Button */}
-            <Card className="check-section border-0 shadow-lg sm:shadow-xl bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6 sm:p-8 text-center">
-                <Button
-                  onClick={analyzeAllModalities}
-                  disabled={!allDataReady || isLoading}
-                  className="w-full py-4 sm:py-6 text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-blue-600 via-teal-600 to-purple-600 hover:from-blue-700 hover:via-teal-700 hover:to-purple-700 text-white rounded-xl sm:rounded-2xl shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center space-x-3">
-                      <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-white"></div>
-                      <span>Analyzing...</span>
-                    </div>
-                  ) : (
-                    "Analyze Comprehensive Stress Level"
-                  )}
-                </Button>
-                {!allDataReady && (
-                  <p className="text-gray-500 mt-3 sm:mt-4 text-sm sm:text-base">
-                    Complete all three assessments to enable analysis
-                  </p>
+                </div>
+                {audioFile && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-sm text-green-800">✓ Audio file uploaded successfully</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Results */}
-            {stressResult && (
-              <Card
-                ref={resultsRef}
-                className={`check-section border-2 shadow-2xl ${getStressColor(stressResult.level)} bg-white/90 backdrop-blur-sm`}
-              >
-                <CardHeader className="pb-4 sm:pb-6">
-                  <CardTitle className="text-center text-xl sm:text-2xl font-bold">
-                    Comprehensive Stress Analysis Results
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6 sm:space-y-8">
-                  <div className="text-center">
-                    <div className="text-5xl sm:text-6xl md:text-7xl font-bold mb-3 sm:mb-4">{stressResult.score}%</div>
-                    <div className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{stressResult.level} Stress Level</div>
-                    <Progress value={stressResult.score} className="w-full h-4 sm:h-6 rounded-full" />
+            {/* Physiological Data Section */}
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Activity className="w-5 h-5 text-red-600" />
+                  <span>Physiological Data</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="physio-data">Sensor Data (JSON format)</Label>
+                  <Textarea
+                    id="physio-data"
+                    placeholder='{"heartRate": 75, "skinConductance": 0.5, "temperature": 98.6}'
+                    value={physiologicalData}
+                    onChange={(e) => setPhysiologicalData(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                </div>
+                {physiologicalData.trim() && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-sm text-green-800">✓ Physiological data entered</p>
                   </div>
+                )}
+              </CardContent>
+            </Card>
 
-                  {/* Modality Breakdown */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-center">
-                    <div className="p-3 sm:p-4 bg-blue-50 rounded-lg sm:rounded-xl">
-                      <div className="text-xl sm:text-2xl font-bold text-blue-600">{stressResult.physiological}%</div>
-                      <div className="text-xs sm:text-sm text-gray-600">Physiological</div>
-                    </div>
-                    <div className="p-3 sm:p-4 bg-teal-50 rounded-lg sm:rounded-xl">
-                      <div className="text-xl sm:text-2xl font-bold text-teal-600">{stressResult.voice}%</div>
-                      <div className="text-xs sm:text-sm text-gray-600">Voice</div>
-                    </div>
-                    <div className="p-3 sm:p-4 bg-purple-50 rounded-lg sm:rounded-xl">
-                      <div className="text-xl sm:text-2xl font-bold text-purple-600">{stressResult.questionnaire}%</div>
-                      <div className="text-xs sm:text-sm text-gray-600">Questionnaire</div>
-                    </div>
+            {/* Questionnaire Section */}
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <FileText className="w-5 h-5 text-green-600" />
+                  <span>Stress Questionnaire</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {stressQuestions.map((question, index) => (
+                  <div key={index} className="space-y-2">
+                    <Label className="text-sm font-medium">{question}</Label>
+                    <RadioGroup
+                      value={questionnaire[index] || ""}
+                      onValueChange={(value) => handleQuestionnaireChange(index, value)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="0" id={`q${index}-0`} />
+                        <Label htmlFor={`q${index}-0`} className="text-sm">
+                          Never
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="1" id={`q${index}-1`} />
+                        <Label htmlFor={`q${index}-1`} className="text-sm">
+                          Sometimes
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="2" id={`q${index}-2`} />
+                        <Label htmlFor={`q${index}-2`} className="text-sm">
+                          Often
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="3" id={`q${index}-3`} />
+                        <Label htmlFor={`q${index}-3`} className="text-sm">
+                          Always
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
-
-                  <div className="space-y-2 sm:space-y-3">
-                    <h4 className="font-bold text-base sm:text-lg">Recommendations:</h4>
-                    <ul className="list-disc list-inside space-y-1 sm:space-y-2">
-                      {stressResult.recommendations?.map((rec: string, index: number) => (
-                        <li key={index} className="text-gray-700 text-sm sm:text-base">
-                          {rec}
-                        </li>
-                      ))}
-                    </ul>
+                ))}
+                {Object.keys(questionnaire).length === stressQuestions.length && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-sm text-green-800">✓ Questionnaire completed</p>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-                  <div className="text-center text-xs sm:text-sm text-gray-500 border-t pt-3 sm:pt-4">
-                    Analysis completed at {new Date(stressResult.timestamp).toLocaleString()}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {!stressResult && !isLoading && (
-              <Card className="check-section border-0 shadow-lg sm:shadow-xl bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-8 sm:p-10 md:p-12 text-center">
-                  <Activity className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-gray-400 mx-auto mb-4 sm:mb-6" />
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-600 mb-3 sm:mb-4">
-                    Ready for Comprehensive Analysis
-                  </h3>
-                  <p className="text-gray-500 text-base sm:text-lg">
-                    Complete all three assessment methods to receive your detailed multimodal stress analysis.
-                  </p>
-                </CardContent>
-              </Card>
+        {/* Analysis Button */}
+        {!isAnalyzing && !results && (
+          <div className="text-center mb-8">
+            <Button onClick={handleAnalyze} disabled={!isFormComplete} size="lg" className="px-8 py-3 text-lg">
+              <Brain className="w-5 h-5 mr-2" />
+              Analyze Stress Level
+            </Button>
+            {!isFormComplete && (
+              <p className="text-sm text-gray-500 mt-2">Please complete all three sections to enable analysis</p>
             )}
           </div>
-        </div>
+        )}
+
+        {/* Analysis Progress */}
+        {isAnalyzing && (
+          <Card className="mb-8">
+            <CardContent className="p-8 text-center">
+              <div className="mb-6">
+                <Brain className="w-16 h-16 mx-auto text-blue-600 animate-pulse mb-4" />
+                <h3 className="text-2xl font-semibold text-gray-900 mb-2">Analyzing Your Stress Level</h3>
+                <p className="text-gray-600">
+                  Our AI is processing your multimodal data. This may take up to 60 seconds.
+                </p>
+              </div>
+              <div className="max-w-md mx-auto">
+                <Progress value={progress} className="h-3 mb-2" />
+                <p className="text-sm text-gray-500">{Math.round(progress)}% Complete</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Results Section */}
+        {results && (
+          <div className="space-y-8">
+            {/* Overall Results */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-2xl">
+                  <BarChart3 className="w-6 h-6 text-blue-600" />
+                  <span>Analysis Results</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Stress Level</h3>
+                    <p
+                      className={`text-3xl font-bold ${
+                        results.overallStress === "High Stress" ? "text-red-600" : "text-green-600"
+                      }`}
+                    >
+                      {results.overallStress}
+                    </p>
+                  </div>
+                  <div className="text-center p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Stress Score</h3>
+                    <p
+                      className={`text-3xl font-bold ${results.stressScore >= 70 ? "text-red-600" : "text-green-600"}`}
+                    >
+                      {results.stressScore}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-3">Recommendations</h4>
+                  <ul className="space-y-2">
+                    {results.recommendations.map((rec: string, index: number) => (
+                      <li key={index} className="flex items-start space-x-2">
+                        <span className="text-blue-600 mt-1">•</span>
+                        <span className="text-gray-700">{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* XAI Graphs */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-2xl">
+                  <Brain className="w-6 h-6 text-purple-600" />
+                  <span>Explainable AI Analysis</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                      <Mic className="w-5 h-5 text-blue-600" />
+                      <span>XAI Graph for Voice</span>
+                    </h4>
+                    <div className="border rounded-lg overflow-hidden">
+                      <img
+                        src={selectedXaiImages.voice || "/placeholder.svg"}
+                        alt="Voice XAI Analysis"
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                      <Activity className="w-5 h-5 text-red-600" />
+                      <span>XAI Graph for Physiological</span>
+                    </h4>
+                    <div className="border rounded-lg overflow-hidden">
+                      <img
+                        src={selectedXaiImages.physiological || "/placeholder.svg"}
+                        alt="Physiological XAI Analysis"
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                      <Zap className="w-5 h-5 text-yellow-600" />
+                      <span>XAI Graph for Late Fusion</span>
+                    </h4>
+                    <div className="border rounded-lg overflow-hidden">
+                      <img
+                        src={selectedXaiImages.lateFusion || "/placeholder.svg"}
+                        alt="Late Fusion XAI Analysis"
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                      <FileText className="w-5 h-5 text-green-600" />
+                      <span>XAI Graph for Questionnaire</span>
+                    </h4>
+                    <div className="border rounded-lg overflow-hidden">
+                      <img
+                        src={selectedXaiImages.questionnaire || "/placeholder.svg"}
+                        alt="Questionnaire XAI Analysis"
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* New Analysis Button */}
+            <div className="text-center">
+              <Button
+                onClick={() => {
+                  setResults(null)
+                  setProgress(0)
+                  setSelectedXaiImages({})
+                }}
+                variant="outline"
+                size="lg"
+              >
+                Run New Analysis
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
-    </main>
+    </div>
   )
 }
