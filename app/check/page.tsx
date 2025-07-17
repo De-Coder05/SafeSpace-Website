@@ -2,36 +2,36 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Mic, Upload, Activity, FileText, Brain, Zap, BarChart3 } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Mic, Activity, FileText, Brain, Zap, Shield, Heart, Upload, CheckCircle, AlertCircle } from "lucide-react"
 
-// Sample XAI images arrays (you can replace these with actual image URLs)
+// Sample XAI images for each modality
 const xaiImages = {
   voice: [
-    "/placeholder.svg?height=300&width=400&text=Voice+XAI+Graph+1",
-    "/placeholder.svg?height=300&width=400&text=Voice+XAI+Graph+2",
-    "/placeholder.svg?height=300&width=400&text=Voice+XAI+Graph+3",
+    "/placeholder.svg?height=200&width=300&text=Voice+XAI+Graph+1",
+    "/placeholder.svg?height=200&width=300&text=Voice+XAI+Graph+2",
+    "/placeholder.svg?height=200&width=300&text=Voice+XAI+Graph+3",
   ],
   physiological: [
-    "/placeholder.svg?height=300&width=400&text=Physiological+XAI+Graph+1",
-    "/placeholder.svg?height=300&width=400&text=Physiological+XAI+Graph+2",
-    "/placeholder.svg?height=300&width=400&text=Physiological+XAI+Graph+3",
+    "/placeholder.svg?height=200&width=300&text=Physiological+XAI+Graph+1",
+    "/placeholder.svg?height=200&width=300&text=Physiological+XAI+Graph+2",
+    "/placeholder.svg?height=200&width=300&text=Physiological+XAI+Graph+3",
   ],
-  lateFusion: [
-    "/placeholder.svg?height=300&width=400&text=Late+Fusion+XAI+Graph+1",
-    "/placeholder.svg?height=300&width=400&text=Late+Fusion+XAI+Graph+2",
-    "/placeholder.svg?height=300&width=400&text=Late+Fusion+XAI+Graph+3",
+  latefusion: [
+    "/placeholder.svg?height=200&width=300&text=Late+Fusion+XAI+Graph+1",
+    "/placeholder.svg?height=200&width=300&text=Late+Fusion+XAI+Graph+2",
+    "/placeholder.svg?height=200&width=300&text=Late+Fusion+XAI+Graph+3",
   ],
   questionnaire: [
-    "/placeholder.svg?height=300&width=400&text=Questionnaire+XAI+Graph+1",
-    "/placeholder.svg?height=300&width=400&text=Questionnaire+XAI+Graph+2",
-    "/placeholder.svg?height=300&width=400&text=Questionnaire+XAI+Graph+3",
+    "/placeholder.svg?height=200&width=300&text=Questionnaire+XAI+Graph+1",
+    "/placeholder.svg?height=200&width=300&text=Questionnaire+XAI+Graph+2",
+    "/placeholder.svg?height=200&width=300&text=Questionnaire+XAI+Graph+3",
   ],
 }
 
@@ -47,232 +47,308 @@ const stressQuestions = [
 
 export default function CheckPage() {
   const [audioFile, setAudioFile] = useState<File | null>(null)
-  const [physiologicalData, setPhysiologicalData] = useState("")
-  const [questionnaire, setQuestionnaire] = useState<Record<string, string>>({})
+  const [physiologicalFile, setPhysiologicalFile] = useState<File | null>(null)
+  const [heartRate, setHeartRate] = useState("")
+  const [bloodPressure, setBloodPressure] = useState("")
+  const [skinConductance, setSkinConductance] = useState("")
+  const [useManualInput, setUseManualInput] = useState(true)
+  const [questionnaire, setQuestionnaire] = useState<number[]>(new Array(7).fill(0))
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [results, setResults] = useState<any>(null)
-  const [selectedXaiImages, setSelectedXaiImages] = useState<Record<string, string>>({})
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [result, setResult] = useState<any>(null)
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleQuestionnaireChange = (index: number, value: number) => {
+    const newQuestionnaire = [...questionnaire]
+    newQuestionnaire[index] = value
+    setQuestionnaire(newQuestionnaire)
+  }
+
+  const handlePhysiologicalFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file && file.type.startsWith("audio/")) {
-      setAudioFile(file)
+    if (file && (file.type === "text/csv" || file.name.endsWith(".csv"))) {
+      setPhysiologicalFile(file)
+      // Clear manual inputs when file is uploaded
+      setHeartRate("")
+      setBloodPressure("")
+      setSkinConductance("")
+    } else {
+      alert("Please upload a valid CSV file")
     }
   }
 
-  const handleQuestionnaireChange = (questionIndex: number, value: string) => {
-    setQuestionnaire((prev) => ({
-      ...prev,
-      [questionIndex]: value,
-    }))
-  }
+  const isFormValid = () => {
+    const hasAudio = audioFile !== null
+    const hasPhysiological = useManualInput ? heartRate && bloodPressure && skinConductance : physiologicalFile !== null
+    const hasQuestionnaire = questionnaire.every((answer) => answer > 0)
 
-  const getRandomXaiImages = () => {
-    return {
-      voice: xaiImages.voice[Math.floor(Math.random() * xaiImages.voice.length)],
-      physiological: xaiImages.physiological[Math.floor(Math.random() * xaiImages.physiological.length)],
-      lateFusion: xaiImages.lateFusion[Math.floor(Math.random() * xaiImages.lateFusion.length)],
-      questionnaire: xaiImages.questionnaire[Math.floor(Math.random() * xaiImages.questionnaire.length)],
-    }
-  }
-
-  const generateHardcodedResults = () => {
-    const isHighStress = Math.random() > 0.5
-    const stressLevel = isHighStress ? "High Stress" : "Low Stress"
-    const score = isHighStress
-      ? Math.floor(Math.random() * 31) + 70 // 70-100%
-      : Math.floor(Math.random() * 41) + 10 // 10-50%
-
-    return {
-      overallStress: stressLevel,
-      stressScore: score,
-      recommendations: isHighStress
-        ? [
-            "Consider taking regular breaks throughout your day",
-            "Practice deep breathing exercises or meditation",
-            "Engage in physical activity to reduce stress hormones",
-            "Ensure you're getting adequate sleep (7-9 hours)",
-            "Consider speaking with a mental health professional",
-          ]
-        : [
-            "Maintain your current stress management practices",
-            "Continue with regular exercise and healthy habits",
-            "Keep up good sleep hygiene",
-            "Stay connected with supportive friends and family",
-            "Consider mindfulness practices to maintain balance",
-          ],
-    }
+    return hasAudio && hasPhysiological && hasQuestionnaire
   }
 
   const handleAnalyze = async () => {
-    if (!audioFile || !physiologicalData.trim() || Object.keys(questionnaire).length < stressQuestions.length) {
-      alert("Please complete all three sections before analyzing.")
+    if (!isFormValid()) {
+      alert("Please complete all sections before analyzing.")
       return
     }
 
     setIsAnalyzing(true)
     setProgress(0)
-    setResults(null)
+    setResult(null)
 
-    // Select random XAI images
-    const randomImages = getRandomXaiImages()
-    setSelectedXaiImages(randomImages)
-
-    // Simulate 60-second analysis with progress bar
-    const interval = setInterval(() => {
+    // Progress bar animation over 60 seconds
+    const progressInterval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          clearInterval(interval)
-          setIsAnalyzing(false)
-          setResults(generateHardcodedResults())
+          clearInterval(progressInterval)
           return 100
         }
-        return prev + 100 / 60 // Increment by ~1.67% per second for 60 seconds
+        return prev + 100 / 600 // 60 seconds = 600 intervals of 100ms
       })
-    }, 1000)
+    }, 100)
+
+    // Generate result after 60 seconds
+    setTimeout(() => {
+      const isHighStress = Math.random() > 0.5
+      const stressLevel = isHighStress ? "High Stress" : "Low Stress"
+      const score = isHighStress ? Math.floor(Math.random() * 31) + 70 : Math.floor(Math.random() * 41) + 10
+
+      // Select random XAI images
+      const selectedXaiImages = {
+        voice: xaiImages.voice[Math.floor(Math.random() * 3)],
+        physiological: xaiImages.physiological[Math.floor(Math.random() * 3)],
+        latefusion: xaiImages.latefusion[Math.floor(Math.random() * 3)],
+        questionnaire: xaiImages.questionnaire[Math.floor(Math.random() * 3)],
+      }
+
+      setResult({
+        stressLevel,
+        score,
+        xaiImages: selectedXaiImages,
+        recommendations: isHighStress
+          ? [
+              "Consider taking regular breaks throughout your day",
+              "Practice deep breathing exercises or meditation",
+              "Engage in physical activity to reduce stress hormones",
+              "Ensure you get adequate sleep (7-9 hours per night)",
+              "Consider speaking with a mental health professional",
+            ]
+          : [
+              "Maintain your current stress management practices",
+              "Continue regular exercise and healthy sleep habits",
+              "Stay connected with friends and family",
+              "Keep practicing mindfulness or relaxation techniques",
+              "Monitor your stress levels regularly",
+            ],
+      })
+
+      setIsAnalyzing(false)
+      clearInterval(progressInterval)
+    }, 60000)
   }
 
-  const isFormComplete =
-    audioFile && physiologicalData.trim() && Object.keys(questionnaire).length === stressQuestions.length
+  const resetForm = () => {
+    setResult(null)
+    setAudioFile(null)
+    setPhysiologicalFile(null)
+    setHeartRate("")
+    setBloodPressure("")
+    setSkinConductance("")
+    setQuestionnaire(new Array(7).fill(0))
+    setProgress(0)
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 pt-20 pb-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Stress Analysis</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Complete all three sections below for a comprehensive stress analysis using our advanced AI technology.
-          </p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Comprehensive Stress Analysis</h1>
+          <p className="text-xl text-gray-600">Upload your data for multimodal stress detection</p>
         </div>
 
-        {!isAnalyzing && !results && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Audio Input Section */}
-            <Card className="h-fit">
+        {!result && !isAnalyzing && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            {/* Audio Analysis */}
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Mic className="w-5 h-5 text-blue-600" />
-                  <span>Voice Analysis</span>
+                <CardTitle className="flex items-center gap-2">
+                  <Mic className="h-5 w-5 text-blue-600" />
+                  Voice Analysis
+                  {audioFile && <CheckCircle className="h-4 w-4 text-green-500" />}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="audio-upload">Upload Audio File</Label>
-                  <div className="mt-2">
-                    <input
-                      ref={fileInputRef}
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                    <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <Label htmlFor="audio" className="cursor-pointer">
+                      <span className="text-sm font-medium">Upload Audio File</span>
+                      <p className="text-xs text-gray-500 mt-1">MP3, WAV, M4A supported</p>
+                    </Label>
+                    <Input
+                      id="audio"
                       type="file"
                       accept="audio/*"
-                      onChange={handleFileUpload}
+                      onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
                       className="hidden"
-                      id="audio-upload"
                     />
-                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
-                      <Upload className="w-4 h-4 mr-2" />
-                      {audioFile ? audioFile.name : "Choose Audio File"}
+                  </div>
+                  {audioFile && (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-green-800">{audioFile.name}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Physiological Data */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-red-600" />
+                  Physiological Data
+                  {(physiologicalFile || (heartRate && bloodPressure && skinConductance)) && (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Toggle between file upload and manual input */}
+                  <div className="flex items-center justify-center space-x-4 mb-4">
+                    <Button
+                      variant={useManualInput ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setUseManualInput(true)
+                        setPhysiologicalFile(null)
+                      }}
+                    >
+                      Manual Input
+                    </Button>
+                    <Button
+                      variant={!useManualInput ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setUseManualInput(false)
+                        setHeartRate("")
+                        setBloodPressure("")
+                        setSkinConductance("")
+                      }}
+                    >
+                      CSV Upload
                     </Button>
                   </div>
+
+                  {useManualInput ? (
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="heartRate">Heart Rate (BPM)</Label>
+                        <Input
+                          id="heartRate"
+                          type="number"
+                          placeholder="e.g., 72"
+                          value={heartRate}
+                          onChange={(e) => setHeartRate(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="bloodPressure">Blood Pressure (mmHg)</Label>
+                        <Input
+                          id="bloodPressure"
+                          placeholder="e.g., 120/80"
+                          value={bloodPressure}
+                          onChange={(e) => setBloodPressure(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="skinConductance">Skin Conductance (μS)</Label>
+                        <Input
+                          id="skinConductance"
+                          type="number"
+                          step="0.1"
+                          placeholder="e.g., 2.5"
+                          value={skinConductance}
+                          onChange={(e) => setSkinConductance(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-red-400 transition-colors">
+                        <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <Label htmlFor="physiological-csv" className="cursor-pointer">
+                          <span className="text-sm font-medium">Upload CSV File</span>
+                          <p className="text-xs text-gray-500 mt-1">
+                            CSV with heart rate, blood pressure, skin conductance data
+                          </p>
+                        </Label>
+                        <Input
+                          id="physiological-csv"
+                          type="file"
+                          accept=".csv"
+                          onChange={handlePhysiologicalFileUpload}
+                          className="hidden"
+                        />
+                      </div>
+                      {physiologicalFile && (
+                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="text-sm text-green-800">{physiologicalFile.name}</span>
+                        </div>
+                      )}
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription className="text-xs">
+                          CSV should contain columns: heart_rate, blood_pressure_systolic, blood_pressure_diastolic,
+                          skin_conductance
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  )}
                 </div>
-                {audioFile && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                    <p className="text-sm text-green-800">✓ Audio file uploaded successfully</p>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
-            {/* Physiological Data Section */}
-            <Card className="h-fit">
+            {/* Questionnaire */}
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Activity className="w-5 h-5 text-red-600" />
-                  <span>Physiological Data</span>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-green-600" />
+                  Stress Questionnaire
+                  {questionnaire.every((answer) => answer > 0) && <CheckCircle className="h-4 w-4 text-green-500" />}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="physio-data">Sensor Data (JSON format)</Label>
-                  <Textarea
-                    id="physio-data"
-                    placeholder='{"heartRate": 75, "skinConductance": 0.5, "temperature": 98.6}'
-                    value={physiologicalData}
-                    onChange={(e) => setPhysiologicalData(e.target.value)}
-                    className="min-h-[100px]"
-                  />
+              <CardContent>
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {stressQuestions.map((question, index) => (
+                    <div key={index} className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        {index + 1}. {question}
+                      </Label>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4].map((value) => (
+                          <button
+                            key={value}
+                            onClick={() => handleQuestionnaireChange(index, value)}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              questionnaire[index] === value
+                                ? "bg-green-600 text-white"
+                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                            }`}
+                          >
+                            {value}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded">
+                    <strong>Scale:</strong> 1 = Never, 2 = Sometimes, 3 = Often, 4 = Almost Always
+                  </div>
                 </div>
-                {physiologicalData.trim() && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                    <p className="text-sm text-green-800">✓ Physiological data entered</p>
-                  </div>
-                )}
               </CardContent>
             </Card>
-
-            {/* Questionnaire Section */}
-            <Card className="h-fit">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <FileText className="w-5 h-5 text-green-600" />
-                  <span>Stress Questionnaire</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {stressQuestions.map((question, index) => (
-                  <div key={index} className="space-y-2">
-                    <Label className="text-sm font-medium">{question}</Label>
-                    <RadioGroup
-                      value={questionnaire[index] || ""}
-                      onValueChange={(value) => handleQuestionnaireChange(index, value)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="0" id={`q${index}-0`} />
-                        <Label htmlFor={`q${index}-0`} className="text-sm">
-                          Never
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="1" id={`q${index}-1`} />
-                        <Label htmlFor={`q${index}-1`} className="text-sm">
-                          Sometimes
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="2" id={`q${index}-2`} />
-                        <Label htmlFor={`q${index}-2`} className="text-sm">
-                          Often
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="3" id={`q${index}-3`} />
-                        <Label htmlFor={`q${index}-3`} className="text-sm">
-                          Always
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                ))}
-                {Object.keys(questionnaire).length === stressQuestions.length && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                    <p className="text-sm text-green-800">✓ Questionnaire completed</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Analysis Button */}
-        {!isAnalyzing && !results && (
-          <div className="text-center mb-8">
-            <Button onClick={handleAnalyze} disabled={!isFormComplete} size="lg" className="px-8 py-3 text-lg">
-              <Brain className="w-5 h-5 mr-2" />
-              Analyze Stress Level
-            </Button>
-            {!isFormComplete && (
-              <p className="text-sm text-gray-500 mt-2">Please complete all three sections to enable analysis</p>
-            )}
           </div>
         )}
 
@@ -281,150 +357,144 @@ export default function CheckPage() {
           <Card className="mb-8">
             <CardContent className="p-8 text-center">
               <div className="mb-6">
-                <Brain className="w-16 h-16 mx-auto text-blue-600 animate-pulse mb-4" />
-                <h3 className="text-2xl font-semibold text-gray-900 mb-2">Analyzing Your Stress Level</h3>
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <h3 className="text-xl font-semibold mb-2">Analyzing Your Data...</h3>
                 <p className="text-gray-600">
-                  Our AI is processing your multimodal data. This may take up to 60 seconds.
+                  Our AI is processing your multimodal data for comprehensive stress analysis
                 </p>
               </div>
-              <div className="max-w-md mx-auto">
-                <Progress value={progress} className="h-3 mb-2" />
+              <div className="max-w-md mx-auto space-y-2">
+                <Progress value={progress} className="h-3" />
                 <p className="text-sm text-gray-500">{Math.round(progress)}% Complete</p>
+                <p className="text-xs text-gray-400">
+                  This process takes approximately 60 seconds for accurate results
+                </p>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Results Section */}
-        {results && (
+        {/* Results */}
+        {result && (
           <div className="space-y-8">
-            {/* Overall Results */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-2xl">
-                  <BarChart3 className="w-6 h-6 text-blue-600" />
-                  <span>Analysis Results</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Stress Level</h3>
-                    <p
-                      className={`text-3xl font-bold ${
-                        results.overallStress === "High Stress" ? "text-red-600" : "text-green-600"
-                      }`}
-                    >
-                      {results.overallStress}
-                    </p>
-                  </div>
-                  <div className="text-center p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Stress Score</h3>
-                    <p
-                      className={`text-3xl font-bold ${results.stressScore >= 70 ? "text-red-600" : "text-green-600"}`}
-                    >
-                      {results.stressScore}%
-                    </p>
-                  </div>
+            {/* Main Result */}
+            <Card className="border-2 border-blue-200">
+              <CardContent className="p-8 text-center">
+                <div
+                  className={`inline-flex items-center gap-2 px-6 py-3 rounded-full text-xl font-bold mb-4 ${
+                    result.stressLevel === "High Stress" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
+                  }`}
+                >
+                  {result.stressLevel === "High Stress" ? (
+                    <Shield className="h-6 w-6" />
+                  ) : (
+                    <Heart className="h-6 w-6" />
+                  )}
+                  {result.stressLevel}
                 </div>
-
-                <div className="mt-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-3">Recommendations</h4>
-                  <ul className="space-y-2">
-                    {results.recommendations.map((rec: string, index: number) => (
-                      <li key={index} className="flex items-start space-x-2">
-                        <span className="text-blue-600 mt-1">•</span>
-                        <span className="text-gray-700">{rec}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <p className="text-3xl font-bold text-gray-900 mb-2">{result.score}%</p>
+                <p className="text-gray-600">Stress Level Score</p>
               </CardContent>
             </Card>
 
             {/* XAI Graphs */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-2xl">
-                  <Brain className="w-6 h-6 text-purple-600" />
-                  <span>Explainable AI Analysis</span>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-purple-600" />
+                  Explainable AI Analysis
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                      <Mic className="w-5 h-5 text-blue-600" />
-                      <span>XAI Graph for Voice</span>
+                  <div className="text-center">
+                    <h4 className="font-semibold mb-2 flex items-center justify-center gap-2">
+                      <Mic className="h-4 w-4 text-blue-600" />
+                      XAI Graph for Voice
                     </h4>
-                    <div className="border rounded-lg overflow-hidden">
-                      <img
-                        src={selectedXaiImages.voice || "/placeholder.svg"}
-                        alt="Voice XAI Analysis"
-                        className="w-full h-48 object-cover"
-                      />
-                    </div>
+                    <img
+                      src={result.xaiImages.voice || "/placeholder.svg"}
+                      alt="Voice XAI Analysis"
+                      className="w-full h-48 object-cover rounded-lg border"
+                    />
                   </div>
-
-                  <div className="space-y-3">
-                    <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                      <Activity className="w-5 h-5 text-red-600" />
-                      <span>XAI Graph for Physiological</span>
+                  <div className="text-center">
+                    <h4 className="font-semibold mb-2 flex items-center justify-center gap-2">
+                      <Activity className="h-4 w-4 text-red-600" />
+                      XAI Graph for Physiological
                     </h4>
-                    <div className="border rounded-lg overflow-hidden">
-                      <img
-                        src={selectedXaiImages.physiological || "/placeholder.svg"}
-                        alt="Physiological XAI Analysis"
-                        className="w-full h-48 object-cover"
-                      />
-                    </div>
+                    <img
+                      src={result.xaiImages.physiological || "/placeholder.svg"}
+                      alt="Physiological XAI Analysis"
+                      className="w-full h-48 object-cover rounded-lg border"
+                    />
                   </div>
-
-                  <div className="space-y-3">
-                    <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                      <Zap className="w-5 h-5 text-yellow-600" />
-                      <span>XAI Graph for Late Fusion</span>
+                  <div className="text-center">
+                    <h4 className="font-semibold mb-2 flex items-center justify-center gap-2">
+                      <Zap className="h-4 w-4 text-yellow-600" />
+                      XAI Graph for Late Fusion
                     </h4>
-                    <div className="border rounded-lg overflow-hidden">
-                      <img
-                        src={selectedXaiImages.lateFusion || "/placeholder.svg"}
-                        alt="Late Fusion XAI Analysis"
-                        className="w-full h-48 object-cover"
-                      />
-                    </div>
+                    <img
+                      src={result.xaiImages.latefusion || "/placeholder.svg"}
+                      alt="Late Fusion XAI Analysis"
+                      className="w-full h-48 object-cover rounded-lg border"
+                    />
                   </div>
-
-                  <div className="space-y-3">
-                    <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                      <FileText className="w-5 h-5 text-green-600" />
-                      <span>XAI Graph for Questionnaire</span>
+                  <div className="text-center">
+                    <h4 className="font-semibold mb-2 flex items-center justify-center gap-2">
+                      <FileText className="h-4 w-4 text-green-600" />
+                      XAI Graph for Questionnaire
                     </h4>
-                    <div className="border rounded-lg overflow-hidden">
-                      <img
-                        src={selectedXaiImages.questionnaire || "/placeholder.svg"}
-                        alt="Questionnaire XAI Analysis"
-                        className="w-full h-48 object-cover"
-                      />
-                    </div>
+                    <img
+                      src={result.xaiImages.questionnaire || "/placeholder.svg"}
+                      alt="Questionnaire XAI Analysis"
+                      className="w-full h-48 object-cover rounded-lg border"
+                    />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Recommendations */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Personalized Recommendations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {result.recommendations.map((rec: string, index: number) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span className="text-gray-700">{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+
             {/* New Analysis Button */}
             <div className="text-center">
-              <Button
-                onClick={() => {
-                  setResults(null)
-                  setProgress(0)
-                  setSelectedXaiImages({})
-                }}
-                variant="outline"
-                size="lg"
-              >
-                Run New Analysis
+              <Button onClick={resetForm} className="bg-blue-600 hover:bg-blue-700 px-8 py-3">
+                Start New Analysis
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Analyze Button */}
+        {!result && !isAnalyzing && (
+          <div className="text-center">
+            <Button
+              onClick={handleAnalyze}
+              disabled={!isFormValid()}
+              className="bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 px-8 py-3 text-lg font-semibold"
+            >
+              <Brain className="h-5 w-5 mr-2" />
+              Analyze Stress Level
+            </Button>
+            {!isFormValid() && (
+              <p className="text-red-600 text-sm mt-2">Please complete all three sections to proceed</p>
+            )}
           </div>
         )}
       </div>
